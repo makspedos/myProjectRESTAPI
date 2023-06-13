@@ -1,0 +1,150 @@
+{% extends 'html/base.html' %}
+{% load static %}
+{% block content %}
+    <div class="container">
+    <div id="task-container">
+        <div id="form-wrapper">
+            <form id="form">
+                <div class="flex-wrapper">
+                    <div style="flex:6">
+                        <input id="name" class="form-control"type="text" name="name" placeholder="Add task">
+                    </div>
+                    <div style="flex:1">
+                        <input id="submit" class="btn", type="submit">
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div id="list-wrapper">
+
+        </div>
+
+        <script type="text/javascript">
+            function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+        var activeItem = null
+
+            buildList()
+            function buildList(){
+                var wrapper = document.getElementById('list-wrapper')
+                wrapper.innerHTML = ''
+                var url = 'http://127.0.0.1:8000/myapi/'
+
+                fetch(url)
+                .then((resp)=>resp.json())
+                .then(function (data){
+                    console.log('Data:', data)
+
+                    var list = data
+
+                    for (var i in list){
+                        var item = `<div id="data-row-${i}" class="task-wrapper flex-wrapper">
+                                        <div style="flex:7">
+                                            <span class="name">${list[i].name}</span>
+                                        </div>
+                                        <div style="flex:1">
+                                            <button class="btn btn-sm btn-outline-info edit" >Edit</button>
+                                        </div>
+                                        <div style="flex:1">
+                                            <button class="btn btn-sm btn-outline-delete delete">Delete</button>
+                                        </div>
+                                    </div>`
+
+                            wrapper.innerHTML +=item
+                    }
+                    for (let i in list) {
+                        var editButton = document.getElementsByClassName('edit')[i]
+                        editButton.addEventListener('click', (function (item) {
+                            return function(){
+                                editItem(item)
+                            }
+                        })(list[i]))
+                        var deleteButton = document.getElementsByClassName('delete')[i]
+                        deleteButton.addEventListener('click', (function (item) {
+                            return function(){
+                                deleteItem(item)
+                            }
+                        })(list[i]))
+                    }
+                    }
+                )
+            }
+
+            var form = document.getElementById('form-wrapper')
+            form.addEventListener('submit', function(e){
+                e.preventDefault()
+                console.log('Form submitted')
+                var url = 'http://127.0.0.1:8000/myapi/'
+                if (activeItem != null){
+                    var url = `http://127.0.0.1:8000/myapi/${activeItem.id}/`
+                    activeItem=null
+                    var name = document.getElementById('name').value
+                    console.log('Form submitted')
+                    fetch(url, {
+                        method:'PUT',
+                        headers:{
+                            'Content-type':'application/json',
+                            'X-CSRFToken':csrftoken,
+                        },
+
+                        body:JSON.stringify({'name':name})
+                        }
+                        ).then(function(response){
+                            buildList()
+                            document.getElementById('form').reset()
+                    })
+                }
+                else{
+                    var name = document.getElementById('name').value
+                    console.log('Form submitted')
+                    fetch(url, {
+                        method:'POST',
+                        headers:{
+                            'Content-type':'application/json',
+                            'X-CSRFToken':csrftoken,
+                        },
+
+                        body:JSON.stringify({'name':name})
+                        }
+                        ).then(function(response){
+                            buildList()
+                            document.getElementById('form').reset()
+                    })
+                    }
+            })
+
+            function editItem(item){
+                activeItem = item
+                document.getElementById('name').value = activeItem.name
+		    }
+
+            function deleteItem(item){
+                console.log('Delele')
+                fetch(`http://127.0.0.1:8000/myapi/${item.id}/`, {
+                    method:'DELETE',
+                    headers:
+                        {'Content-type':'application/json',
+                        'X-CSRFToken':csrftoken,}
+
+                }).then((response)=> {
+                    buildList()
+                })
+            }
+        </script>
+    </div>
+    </div>
+{% endblock %}
